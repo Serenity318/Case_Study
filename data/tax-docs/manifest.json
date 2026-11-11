@@ -1,0 +1,52 @@
+[
+  {
+    "filename": "lhdn-einvoice-guideline-v4.8.pdf",
+    "title": "e-Invoice Guideline",
+    "publisher": "Inland Revenue Board of Malaysia (LHDN)",
+    "doc_type": "e_invoice",
+    "version": "4.8",
+    "published_date": "2026-08-30",
+    "language": "en",
+    "source_url": "https://www.hasil.gov.my/wp-content/uploads/IRBM-e-Invoice-Guideline.pdf"
+  },
+  {
+    "filename": "lhdn-einvoice-specific-guideline-v4.9.pdf",
+    "title": "e-Invoice Specific Guideline",
+    "publisher": "Inland Revenue Board of Malaysia (LHDN)",
+    "doc_type": "e_invoice",
+    "version": "4.9",
+    "published_date": "2026-09-07",
+    "language": "en",
+    "source_url": "https://www.hasil.gov.my/wp-content/uploads/IRBM-e-Invoice-Specific-Guideline.pdf"
+  },
+  {
+    "filename": "lhdn-public-ruling-4-2026.pdf",
+    "title": "Special Allowances for Small Value Assets - Public Ruling No. 4/2026",
+    "publisher": "Inland Revenue Board of Malaysia (LHDN)",
+    "doc_type": "income_tax",
+    "version": "4",
+    "published_date": "2026-09-30",
+    "language": "en",
+    "source_url": "https://www.hasil.gov.my/wp-content/uploads/PR-No.4_2026-Special-Allowances-For-Small-Value-Assets.pdf"
+  },
+  {
+    "filename": "lhdn-public-ruling-7-2025.pdf",
+    "title": "Taxation of a Resident Individual Part I - Gifts or Contributions and Allowable Deductions - Public Ruling No. 7/2025",
+    "publisher": "Inland Revenue Board of Malaysia (LHDN)",
+    "doc_type": "income_tax",
+    "version": "7",
+    "published_date": "2025-12-05",
+    "language": "en",
+    "source_url": "https://www.hasil.gov.my/wp-content/uploads/pr-7-2025.pdf"
+  },
+  {
+    "filename": "rmcd-sst-return-and-payment-guide-v3.pdf",
+    "title": "Sales Tax & Service Tax Guide on Return and Payment",
+    "publisher": "Royal Malaysian Customs Department (RMCD)",
+    "doc_type": "sst",
+    "version": "3",
+    "published_date": "2020-10-13",
+    "language": "en",
+    "source_url": "https://pub-359af8e1f79c472292a7e44ec60f3027.r2.dev/Specific%20Guides/EN/Sales%20Tax_Service%20Tax_Guide%20on%20Return%20and%20Payment%20V3.pdf"
+  }
+]
