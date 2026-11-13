@@ -7,13 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ingest": "tsx scripts/ingest.ts",
+    "ingest": "tsx --conditions=react-server scripts/ingest.ts",
     "eval": "tsx scripts/eval.ts"
   },
   "dependencies": {
+    "@next/env": "16.4.6",
+    "@supabase/supabase-js": "^2.119.0",
     "next": "16.4.6",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "unpdf": "^1.9.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
