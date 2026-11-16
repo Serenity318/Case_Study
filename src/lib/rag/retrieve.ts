@@ -13,7 +13,7 @@ export const TOP_K = 5;
  * unanswerable ones 0.516-0.695. Re-measure if the embedding model, dimension or
  * query prefix changes.
  */
-export const SIMILARITY_THRESHOLD = 0.73;
+export const SIMILARITY_THRESHOLD = 0.65;
 
 /** Allowed values for the optional doc_type filter (documents.doc_type). */
 export const DOC_TYPES = ["e_invoice", "income_tax", "sst"] as const;

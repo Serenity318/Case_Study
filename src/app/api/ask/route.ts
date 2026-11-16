@@ -1,21 +1,12 @@
-import { GeminiError, generateJson } from "@/lib/gemini";
-import {
-  ANSWER_SCHEMA,
-  SYSTEM_INSTRUCTION,
-  buildPrompt,
-  verifyAnswer,
-  type NotFoundReason,
-  type VerifiedAnswer,
-} from "@/lib/rag/prompt";
+import { GeminiError } from "@/lib/gemini";
+import { answerQuestion, type RetrievalInfo } from "@/lib/rag/answer";
+import type { NotFoundReason, VerifiedAnswer } from "@/lib/rag/prompt";
 import {
   DOC_TYPES,
   RetrievalError,
-  SIMILARITY_THRESHOLD,
-  TOP_K,
   isDocType,
   pageLabel,
   pageUrl,
-  retrieveChunks,
   type DocType,
   type RetrievedChunk,
 } from "@/lib/rag/retrieve";
@@ -24,13 +15,9 @@ import {
  * POST /api/ask   body: { "question": string, "docType"?: "e_invoice" | "income_tax" | "sst" }
  *
  * 1. Validate input.
- * 2. Embed the question and retrieve the top-k chunks (optionally one doc_type).
- * 3. Layer 1 guard: if the best chunk scores below the threshold, answer "not found"
- *    without calling the LLM.
- * 4. Ask Gemini for a JSON answer citing numbered sources.
- * 5. Layer 2 guard: the model may itself say found=false; any citation number that
- *    does not match a retrieved chunk is removed; an answer left with no valid
- *    citation is reported as not found ("ungrounded").
+ * 2. Run the shared RAG pipeline (src/lib/rag/answer.ts): retrieve the top-k chunks,
+ *    apply the similarity-threshold guard, generate with Gemini, verify citations.
+ * 3. Return the answer, its citations and the retrieved chunks.
  *
  * "Not found" is a normal outcome (HTTP 200, found: false). Errors use
  * { error: { code, message } } with 400 (bad input), 502 (Gemini/database failure)
@@ -76,32 +63,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 2. Retrieve ---------------------------------------------------------------
-    const chunks = await retrieveChunks(question, { docType });
-    const topScore = chunks[0]?.similarity ?? null;
-    const retrieval = { topScore, threshold: SIMILARITY_THRESHOLD, topK: TOP_K, docType: docType ?? null };
-
-    // 3. Layer 1: similarity threshold -----------------------------------------
-    if (topScore === null || topScore < SIMILARITY_THRESHOLD) {
-      const verified: VerifiedAnswer = {
-        found: false,
-        answer: "",
-        citedRefs: [],
-        invalidRefs: [],
-        notFoundReason: "below_threshold",
-      };
-      return answerResponse(verified, chunks, retrieval, startedAt);
-    }
-
-    // 4. Generate -----------------------------------------------------------------
-    const raw = await generateJson({
-      systemInstruction: SYSTEM_INSTRUCTION,
-      prompt: buildPrompt(question, chunks),
-      responseSchema: ANSWER_SCHEMA,
-    });
-
-    // 5. Layer 2: model's own verdict + citation verification --------------------
-    const verified = verifyAnswer(raw, chunks.length);
+    // 2. Retrieve, threshold, generate, verify ------------------------------------
+    const { verified, chunks, retrieval } = await answerQuestion(question, { docType });
     return answerResponse(verified, chunks, retrieval, startedAt);
   } catch (err) {
     return upstreamErrorResponse(err);
@@ -115,7 +78,7 @@ export async function POST(request: Request) {
 function answerResponse(
   verified: VerifiedAnswer,
   chunks: RetrievedChunk[],
-  retrieval: { topScore: number | null; threshold: number; topK: number; docType: DocType | null },
+  retrieval: RetrievalInfo,
   startedAt: number,
 ) {
   const cited = new Set(verified.citedRefs);

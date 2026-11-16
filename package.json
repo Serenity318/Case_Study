@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "ingest": "tsx --conditions=react-server scripts/ingest.ts",
-    "eval": "tsx scripts/eval.ts"
+    "eval": "tsx --conditions=react-server scripts/eval.ts"
   },
   "dependencies": {
     "@next/env": "16.4.6",
