@@ -124,7 +124,7 @@ The pipeline lives in four files: `scripts/ingest.ts` (offline), `src/lib/rag/re
 - **Printed page numbers:** candidates are read from the boilerplate lines with three patterns (`Page N of M`, a bare number, a trailing number). A number is only accepted if the previous page shows N-1 or the next page shows N+1, which rejects constants such as years. The pattern that explains the most pages wins; otherwise `printed_page` is null. This matters because two of the five documents have a 3-page offset between PDF page and printed page.
 - **Skipped pages:** tables of contents (dot leaders, or a "Contents" title with most lines ending in a page number), because they match questions strongly but contain no answers; and pages with fewer than 30 characters of text.
 - **Structure:** headings are detected from numbering (`5.`, `3.2`, Title Case required) or ALL CAPS. Runs of same-level numbered "headings" with no text between them are demoted to list items, wrapped upper-case headings are merged, and a document whose real top-level headings are upper case rejects Title Case ones as list items. The heading stack carries across pages and becomes the chunk's `section` (for example `1. Introduction > 1.3 Transaction Types`). Wrapped lines are re-joined into paragraphs, and `e-` + `Invoice` becomes `e-Invoice`.
-- **Limitations:** text only, no OCR (a scanned PDF fails with "No text extracted"). Tables are flattened to text, with no column structure (inferred from the text-only extraction; eval question q5 tests a flattened table and was answered from the expected document).
+- **Limitations:** text only, no OCR (a scanned PDF fails with "No text extracted"). Tables are flattened to text, with no column structure (observed during ingestion: e-Invoice field tables lose their column structure). Eval question q5, which depends on a table row, was still answered correctly.
 
 ### Chunking Strategy and Size
 
@@ -189,7 +189,7 @@ The pipeline lives in four files: `scripts/ingest.ts` (offline), `src/lib/rag/re
 - **Both page numbers are stored** (Phase 1 option C): `pdf_page` (always correct, used for links) and `printed_page` (what the reader sees on the page, null when not detected). The label reads `p. 5 (PDF p. 8)`, or `p. 6` when both agree, or `PDF p. 2` when no printed number was found (`pageLabel()` in `retrieve.ts`).
 - **Inline markers:** the model writes `[n]` after each sentence. The server keeps only valid numbers (see Hallucination Guard) and returns a `citations` array: document title, doc type, page label, printed and PDF page, section, and a link `source_url#page=<pdf_page>` (`pageUrl()`).
 - **In the UI** (`src/app/ask/page.tsx`), each `[n]` is a link to its entry in the Sources list (hover shows document and page), and each source opens the PDF at that page in a new tab. A collapsible panel shows all five retrieved chunks with their similarity scores and which ones were cited.
-- `source_url` points to the publisher's online PDF, not a local copy, so the page link depends on the browser's PDF viewer honouring `#page=` and on the online file still being the ingested version (inferred).
+- `source_url` points to the publisher's online PDF, not a local copy, so the page link depends on the browser's PDF viewer honouring `#page=` and on the online file still being the ingested version.
 
 ### Hallucination Guard
 
@@ -219,15 +219,15 @@ Three layers, from cheapest to most specific (`answerQuestion()` and `verifyAnsw
 
 | Layer | Choice | Why |
 |---|---|---|
-| App framework | Next.js 16.4.6 (App Router, route handlers), React 19.3, TypeScript | One codebase for the pages and the API routes. Server-only modules (`src/lib/supabase.ts`, `src/lib/gemini.ts`, `src/lib/rag/*`) import `server-only`, so importing them into a browser component is a build error and the keys never reach the client. Why Next.js rather than another framework: (inferred) one deployable app for the CRM and the RAG module. |
-| Styling | Tailwind CSS 4.3, no component library | Small set of pages; the CRM dialogs use the native `<dialog>` element. Reason for no component library: (inferred) fewer dependencies for a small UI. |
-| Database and vector store | Supabase Postgres + pgvector | CRM tables and RAG vectors in one database, with SQL constraints (`CHECK`, unique email, foreign keys with cascade), triggers for `updated_at`, and RLS. Vector search is a plain SQL function (`match_chunks`) next to the data it joins. Why one database rather than a separate vector service: (inferred) 315 chunks do not justify a second system. |
+| App framework | Next.js 16.4.6 (App Router, route handlers), React 19.3, TypeScript | One codebase for the pages and the API routes. Server-only modules (`src/lib/supabase.ts`, `src/lib/gemini.ts`, `src/lib/rag/*`) import `server-only`, so importing them into a browser component is a build error and the keys never reach the client. Why Next.js rather than another framework: Next.js + TypeScript + Supabase/pgvector is the brief's preferred stack, I have built with Next.js and Supabase before, and it gives one deployable app for both the CRM and the RAG module. |
+| Styling | Tailwind CSS 4.3, no component library | Small set of pages; the CRM dialogs use the native `<dialog>` element. Reason for no component library: Tailwind came with the Next.js scaffold; I deliberately added no UI component library to keep dependencies small. |
+| Database and vector store | Supabase Postgres + pgvector | CRM tables and RAG vectors in one database, with SQL constraints (`CHECK`, unique email, foreign keys with cascade), triggers for `updated_at`, and RLS. Vector search is a plain SQL function (`match_chunks`) next to the data it joins. Why one database rather than a separate vector service: 315 chunks don't justify a separate vector service; one database keeps CRM data and vectors in one setup. |
 | Embeddings | Gemini `gemini-embedding-2`, 1536 dims | See Embedding Model (Phase 1 decision). |
 | Answer model | Gemini `gemini-3.5-flash-lite` | See Prompt Design (Phase 2 measurement). Runs within free-tier limits (the eval pauses 8 s between questions for that reason). |
 | Gemini client | REST via `fetch`, no SDK | "So timeout and retry behaviour are explicit" (comment in `src/lib/gemini.ts`). |
 | PDF parsing | `unpdf` | See Document Parsing (Phase 1 decision). |
 | Scripts | `tsx` with `--conditions=react-server` | Ingestion, evaluation and seeding reuse the app's server modules; the `react-server` condition lets `server-only` imports load outside Next.js. Environment variables are loaded with `@next/env`, the same way Next.js does. |
-| RAG framework | none (no LangChain or LlamaIndex) | (inferred) The pipeline is four small files, which keeps each guard and setting visible and testable. |
+| RAG framework | none (no LangChain or LlamaIndex) | I chose no framework so every step (threshold, prompt, citation check) stays visible in my own code, where I can understand, test and explain it. |
 
 ## Evaluation Results
 
@@ -269,7 +269,7 @@ hit@1 and hit@5 are measured per **document**, not per page. q2 shows the differ
 - The eval reports q2 as rank 1, answered, and citing the expected document.
 - But the five retrieved chunks were PDF pages 5, 13, 5, 6 and 12, all from the right document and **none from p. 8**. The chunk containing para 24 exists (chunk 7, PDF p. 8, section "MANNER OF FURNISHING RETURN") but was never retrieved (verified by re-running retrieval for q2 with the current code on 2026-11-16).
 - So the answer could not have been based on para 24, even though every document-level metric marked it as a success. The citation guard did not catch it either, because every cited number pointed to a real retrieved chunk.
-- The chunk holding para 24 starts with MySST log-in steps and sits under a section heading about furnishing returns, so its embedding is probably dominated by content unrelated to the question (inferred).
+- The chunk holding para 24 starts with MySST log-in steps and sits under a section heading about furnishing returns, so its embedding is probably dominated by content unrelated to the question (hypothesis, not yet tested).
 
 With 7 answerable questions, a single case like this moves hit@1 by 14 percentage points, so the 100% figures should be read as "the right document is found", not "the right passage is found".
 
