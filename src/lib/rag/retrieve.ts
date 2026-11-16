@@ -7,11 +7,18 @@ import { getSupabase } from "@/lib/supabase";
 export const TOP_K = 5;
 
 /**
- * Minimum cosine similarity of the BEST chunk for a question to be sent to the model.
- * Measured in Phase 2 Step A with gemini-embedding-2@1536 and the
- * "task: question answering" query prefix: answerable questions scored 0.776-0.815,
- * unanswerable ones 0.516-0.695. Re-measure if the embedding model, dimension or
- * query prefix changes.
+ * Minimum cosine similarity of the BEST chunk for a question to be sent to the model
+ * (layer 1 of the hallucination guard). Scores are for gemini-embedding-2@1536 with the
+ * "task: question answering" query prefix; re-measure if any of those change.
+ *
+ * History: 0.73 was set from the Phase 2 measurement (answerable 0.776-0.815,
+ * unanswerable 0.516-0.695). The 10-question eval (eval/results-threshold-0.73.md)
+ * showed it refused two answerable scenario questions, q2 (0.719) and q7 (0.692).
+ * In the eval the two groups overlap (answerable 0.692-0.814, unanswerable
+ * 0.516-0.741), so no threshold separates them. At 0.65 this check only stops
+ * clearly unrelated questions; in-domain questions the documents do not cover
+ * (q8 0.741, q9 0.668) are refused by layer 2, the model's own found=false.
+ * All 3 unanswerable questions were still refused (eval/results.md).
  */
 export const SIMILARITY_THRESHOLD = 0.65;
 
